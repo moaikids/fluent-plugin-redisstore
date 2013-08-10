@@ -1,0 +1,33 @@
+= Redis output plugin for Fluent event collector
+
+== Overview
+
+*redisstore* output plugin buffers event logs in local file and upload it to redis storage.
+
+this sources folked 'fluent-plugin-redis'. (https://github.com/yuki24/fluent-plugin-redis)
+
+== Installation
+
+== Configuration
+
+    <match pattern>
+      type redisstore
+
+      host REDIS_HOST_ADDRESS
+      port REDIS_PORT
+      db_number REDIS_DB_NUMBER
+      key_prefix prefix_
+      key_suffix _suffix
+      store_type zset
+      key_name key
+      score_name score
+      value_name value
+      key_expire 604800
+      value_expire 86400
+    </match>
+
+== Copyright
+
+Copyright:: Copyright (c) 2013 moaikids
+License::   Apache License, Version 2.0
+
