@@ -92,13 +92,8 @@ module Fluent
         end
       end
       if @value_length > 0
-        len = @redis.zcount sk, '-inf', '+inf'
-        if len > @value_length
-          i = len - @value_length - 1
-          if i >= 0
-            @redis.zremrangebyrank sk, 0, i
-          end
-        end
+        script = generate_zremrangebyrank_script(sk, @value_length)
+        @redis.eval script
       end
     end
 
@@ -129,17 +124,8 @@ module Fluent
         end
       end
       if @value_length > 0
-        len = @redis.llen sk
-        if len > @value_length
-          if @list_order == 'asc'
-            i = len - @value_length - 1
-            if i > 0
-              @redis.lrem sk, 0, i
-            end 
-          else
-            @redis.lrem sk, @value_length,  -1
-          end
-        end
+        script = generate_ltrim_script(sk, @value_length, @list_order)
+        @redis.eval script
       end 
     end
 
@@ -156,6 +142,34 @@ module Fluent
       end
     end
 
+    def generate_zremrangebyrank_script(key, maxlen)
+      script  = "local key = '" + key.to_s + "'\n"
+      script += "local maxlen = " + maxlen.to_s + "\n"
+      script += "local len = tonumber(redis.call('ZCOUNT', key, '-inf', '+inf'))\n"
+      script += "if len > maxlen then\n"
+      script += "    local l = len - maxlen\n"
+      script += "    if l >= 0 then\n"
+      script += "        return redis.call('ZREMRANGEBYRANK', key, 0, l)\n"
+      script += "    end\n"
+      script += "end\n"
+      return script
+    end
+
+    def generate_ltrim_script(key, maxlen, order)
+      script  = "local key = '" + key.to_s + "'\n"
+      script += "local maxlen = " + maxlen.to_s + "\n"
+      script += "local order ='" + order.to_s + "'\n"
+      script += "local len = tonumber(redis.call('LLEN', key))\n"
+      script += "if len > maxlen then\n"
+      script += "    if order == 'asc' then\n"
+      script += "        local l = len - maxlen\n"
+      script += "        return redis.call('LTRIM', key, l, -1)\n"
+      script += "    else\n"
+      script += "        return redis.call('LTRIM', key, 0, maxlen - 1)\n"
+      script += "    end\n"
+      script += "end\n"
+      return script
+    end
 
     def traverse(data, key)
       val = data
