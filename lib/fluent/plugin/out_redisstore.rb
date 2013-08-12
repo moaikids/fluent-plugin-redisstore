@@ -1,7 +1,7 @@
 module Fluent
   class RedisOutput < BufferedOutput
     Fluent::Plugin.register_output('redisstore', self)
-    attr_reader :host, :port, :db_number, :redis, :key_prefix, :key_suffix, :store_type, :key_name, :score_name, :value_name, :key_expire, :value_expire, :value_length, :list_order
+    attr_reader :host, :port, :db_number, :redis, :timeout, :key_prefix, :key_suffix, :store_type, :key_name, :score_name, :value_name, :key_expire, :value_expire, :value_length, :list_order
 
     def initialize
       super
@@ -15,6 +15,7 @@ module Fluent
       @host = conf.has_key?('host') ? conf['host'] : 'localhost'
       @port = conf.has_key?('port') ? conf['port'].to_i : 6379
       @db_number = conf.has_key?('db_number') ? conf['db_number'].to_i : nil
+      @timeout = conf.has_key?('timeout') ? conf['timeout'].to_f : 5.0
 
       @key_prefix = conf.has_key?('key_prefix') ? conf['key_prefix'] : ''
       @key_suffix = conf.has_key?('key_suffix') ? conf['key_suffix'] : ''
@@ -31,7 +32,7 @@ module Fluent
     def start
       super
 
-      @redis = Redis.new(:host => @host, :port => @port,
+      @redis = Redis.new(:host => @host, :port => @port, :timeout => @timeout,
                          :thread_safe => true, :db => @db_number)
     end
 
