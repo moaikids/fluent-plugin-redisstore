@@ -3,8 +3,8 @@ Gem::Specification.new do |gem|
     gem.name        = "fluent-plugin-redisstore"
     gem.version     = "0.0.1"
     gem.authors     = ["moaikids"]
-    gem.summary     = %q{Fluentd plugin}
-    gem.description = %q{Fluentd plugin}
+    gem.summary     = %q{Redis(zset/set/list/string) output plugin for Fluentd}
+    gem.description = %q{Redis(zset/set/list/string) output plugin for Fluentd}
     gem.homepage    = "https://github.com/moaikids/fluent-plugin-redisstore"
 
     gem.files         = `git ls-files`.split($\)

@@ -1,7 +1,7 @@
 module Fluent
   class RedisOutput < BufferedOutput
     Fluent::Plugin.register_output('redisstore', self)
-    attr_reader :host, :port, :db_number, :redis, :timeout, :key_prefix, :key_suffix, :store_type, :key_name, :fixed_key_value, :score_name, :value_name, :key_expire, :value_expire, :value_length, :list_order
+    attr_reader :host, :port, :db_number, :redis, :timeout, :key_prefix, :key_suffix, :store_type, :key_name, :fixed_key_value, :score_name, :value_name, :key_expire, :value_expire, :value_length, :order
 
     def initialize
       super
@@ -27,7 +27,7 @@ module Fluent
       @key_expire = conf.has_key?('key_expire') ? conf['key_expire'].to_i : -1
       @value_expire = conf.has_key?('value_expire') ? conf['value_expire'].to_i : -1
       @value_length = conf.has_key?('value_length') ? conf['value_length'].to_i : -1
-      @list_order = conf.has_key?('list_order') ? conf['list_order'] : 'asc'
+      @order = conf.has_key?('order') ? conf['order'] : 'asc'
     end
 
     def start
@@ -95,7 +95,7 @@ module Fluent
         @redis.zremrangebyscore sk , '-inf' , (now - @value_expire)
       end
       if @value_length > 0
-        script = generate_zremrangebyrank_script(sk, @value_length)
+        script = generate_zremrangebyrank_script(sk, @value_length, @order)
         @redis.eval script
       end
     end
@@ -124,7 +124,7 @@ module Fluent
       v = traverse(record, @value_name)
       sk = @key_prefix + k + @key_suffix
 
-      if @list_order == 'asc'
+      if @order == 'asc'
         @redis.rpush sk, v
       else
         @redis.lpush sk, v
@@ -133,7 +133,7 @@ module Fluent
         @redis.expire sk, @key_expire
       end
       if @value_length > 0
-        script = generate_ltrim_script(sk, @value_length, @list_order)
+        script = generate_ltrim_script(sk, @value_length, @order)
         @redis.eval script
       end 
     end
@@ -153,14 +153,19 @@ module Fluent
       end
     end
 
-    def generate_zremrangebyrank_script(key, maxlen)
+    def generate_zremrangebyrank_script(key, maxlen, order)
       script  = "local key = '" + key.to_s + "'\n"
       script += "local maxlen = " + maxlen.to_s + "\n"
+      script += "local order ='" + order.to_s + "'\n"
       script += "local len = tonumber(redis.call('ZCOUNT', key, '-inf', '+inf'))\n"
       script += "if len > maxlen then\n"
-      script += "    local l = len - maxlen\n"
-      script += "    if l >= 0 then\n"
-      script += "        return redis.call('ZREMRANGEBYRANK', key, 0, l)\n"
+      script += "    if order == 'asc' then\n"
+      script += "       local l = len - maxlen\n"
+      script += "       if l >= 0 then\n"
+      script += "           return redis.call('ZREMRANGEBYRANK', key, 0, l)\n"
+      script += "       end\n"
+      script += "    else\n"
+      script += "       return redis.call('ZREMRANGEBYRANK', key, maxlen, -1)\n"
       script += "    end\n"
       script += "end\n"
       return script

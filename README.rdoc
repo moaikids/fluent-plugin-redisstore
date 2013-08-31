@@ -25,7 +25,7 @@ this sources folked 'fluent-plugin-redis'. (https://github.com/yuki24/fluent-plu
       key_expire 604800(int, all, nil)
       value_expire 86400(int , zset, nil)
       value_length 100(int, zset|list, nil)
-      list_order asc(asc|desc, list, nil)
+      order asc(asc|desc, zset/list, nil)
     </match>
 
 == Copyright
