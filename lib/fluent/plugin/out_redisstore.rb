@@ -22,8 +22,9 @@ module Fluent
       @store_type = conf.has_key?('store_type') ? conf['store_type'] : 'zset'
       @key_name = conf['key_name']
       @fixed_key_value = conf.has_key?('fixed_key_value') ? conf['fixed_key_value'] : nil
-      @score_name = conf['score_name']
-      @value_name = conf['value_name']
+      @score_name = conf.has_key?('score_name') ? conf['score_name'] : nil
+      @value_name = conf.has_key?('value_name') ? conf['value_name'] : nil
+      @value_name = nil if @value_name and @value_name.empty?
       @key_expire = conf.has_key?('key_expire') ? conf['key_expire'].to_i : -1
       @value_expire = conf.has_key?('value_expire') ? conf['value_expire'].to_i : -1
       @value_length = conf.has_key?('value_length') ? conf['value_length'].to_i : -1
@@ -84,7 +85,11 @@ module Fluent
       else
         s = now
       end
-      v = traverse(record, @value_name)
+      if @value_name == nil
+        v = record
+      else
+        v = traverse(record, @value_name)
+      end
       sk = @key_prefix + k + @key_suffix
       
       @redis.zadd sk , s, v
@@ -106,7 +111,11 @@ module Fluent
       else
         k = traverse(record, @key_name).to_s
       end
-      v = traverse(record, @value_name)
+      if @value_name == nil
+        v = record
+      else
+        v = traverse(record, @value_name)
+      end
       sk = @key_prefix + k + @key_suffix
               
       @redis.sadd sk, v
@@ -121,7 +130,11 @@ module Fluent
       else
         k = traverse(record, @key_name).to_s
       end
-      v = traverse(record, @value_name)
+      if @value_name == nil
+        v = record
+      else
+        v = traverse(record, @value_name)
+      end
       sk = @key_prefix + k + @key_suffix
 
       if @order == 'asc'
@@ -144,7 +157,11 @@ module Fluent
       else
         k = traverse(record, @key_name).to_s
       end
-      v = traverse(record, @value_name)
+      if @value_name == nil
+        v = record
+      else
+        v = traverse(record, @value_name)
+      end
       sk = @key_prefix + k + @key_suffix
          
       @redis.set sk, v
