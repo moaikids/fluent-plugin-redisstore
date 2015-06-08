@@ -32,12 +32,9 @@ module Fluent
 
     def start
       super
-      @redis = Redis.new(:host => @host, :port => @port, :timeout => @timeout,
-                         :thread_safe => true, :db => @db_number)
     end
 
     def shutdown
-      @redis.quit
     end
 
     def format(tag, time, record)
@@ -46,6 +43,9 @@ module Fluent
     end
 
     def write(chunk)
+      @redis = Redis.new(:host => @host, :port => @port, :timeout => @timeout,
+                         :thread_safe => true, :db => @db_number)
+
       @redis.pipelined {
         chunk.open { |io|
           begin
@@ -70,6 +70,8 @@ module Fluent
           end
         }
       }
+
+      @redis.quit
     end
 
     def operation_for_zset(record)
