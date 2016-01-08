@@ -12,6 +12,8 @@ module Fluent
     def configure(conf)
       super
 
+      @driver = conf.has_key?('driver') ? conf['driver'] : nil
+
       @host = conf.has_key?('host') ? conf['host'] : 'localhost'
       @port = conf.has_key?('port') ? conf['port'].to_i : 6379
       @db_number = conf.has_key?('db_number') ? conf['db_number'].to_i : nil
@@ -32,9 +34,26 @@ module Fluent
 
     def start
       super
+
+      opt = {
+        :host => @host,
+        :port => @port,
+        :db => @db_number,
+        :timeout => @timeout,
+        :thread_safe => true,
+      }
+
+      if @driver
+        opt[:driver] = @driver.to_sym
+      end
+
+      @redis = Redis.new(opt)
     end
 
     def shutdown
+      super
+
+      @redis.quit
     end
 
     def format(tag, time, record)
@@ -43,9 +62,6 @@ module Fluent
     end
 
     def write(chunk)
-      @redis = Redis.new(:host => @host, :port => @port, :timeout => @timeout,
-                         :thread_safe => true, :db => @db_number)
-
       @redis.pipelined {
         chunk.open { |io|
           begin
@@ -70,8 +86,6 @@ module Fluent
           end
         }
       }
-
-      @redis.quit
     end
 
     def operation_for_zset(record)
@@ -88,7 +102,7 @@ module Fluent
       end
       v = traverse(record, @value_name)
       sk = @key_prefix + k + @key_suffix
-      
+
       @redis.zadd sk , s, v
       if @key_expire > 0
         @redis.expire sk , @key_expire
@@ -110,7 +124,7 @@ module Fluent
       end
       v = traverse(record, @value_name)
       sk = @key_prefix + k + @key_suffix
-              
+
       @redis.sadd sk, v
       if @key_expire > 0
         @redis.expire sk, @key_expire
@@ -130,14 +144,14 @@ module Fluent
         @redis.rpush sk, v
       else
         @redis.lpush sk, v
-      end             
+      end
       if @key_expire > 0
         @redis.expire sk, @key_expire
       end
       if @value_length > 0
         script = generate_ltrim_script(sk, @value_length, @order)
         @redis.eval script
-      end 
+      end
     end
 
     def operation_for_string(record)
@@ -148,7 +162,7 @@ module Fluent
       end
       v = traverse(record, @value_name)
       sk = @key_prefix + k + @key_suffix
-         
+
       @redis.set sk, v
       if @key_expire > 0
         @redis.expire sk, @key_expire

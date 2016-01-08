@@ -28,6 +28,14 @@ this sources folked 'fluent-plugin-redis'. (https://github.com/yuki24/fluent-plu
       order asc(asc|desc, zset/list, nil)
     </match>
 
+    # use hiredis for better performance
+    # this configuration requires "gem install hiredis"
+    <match pattern>
+      type redisstore
+      driver hiredis
+      ...
+    </match>
+
 == Copyright
 
 Copyright:: Copyright (c) 2013 moaikids
