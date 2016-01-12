@@ -25,6 +25,7 @@ module Fluent
       @key_name = conf['key_name']
       @fixed_key_value = conf.has_key?('fixed_key_value') ? conf['fixed_key_value'] : nil
       @score_name = conf['score_name']
+      @increment_score = conf.has_key?('increment_score') ? conf['increment_score'] : 1.0
       @value_name = conf['value_name']
       @key_expire = conf.has_key?('key_expire') ? conf['key_expire'].to_i : -1
       @value_expire = conf.has_key?('value_expire') ? conf['value_expire'].to_i : -1
@@ -70,6 +71,8 @@ module Fluent
                 (tag, record) = message
                 if @store_type == 'zset'
                   operation_for_zset(record)
+                elsif @store_type == 'zincrby'
+                  operation_for_zincrby(record)
                 elsif @store_type == 'set'
                   operation_for_set(record)
                 elsif @store_type == 'list'
@@ -109,6 +112,25 @@ module Fluent
       end
       if @value_expire > 0
         @redis.zremrangebyscore sk , '-inf' , (now - @value_expire)
+      end
+      if @value_length > 0
+        script = generate_zremrangebyrank_script(sk, @value_length, @order)
+        @redis.eval script
+      end
+    end
+
+    def operation_for_zincrby(record)
+      if @fixed_key_value
+        k = @fixed_key_value
+      else
+        k = traverse(record, @key_name).to_s
+      end
+      v = traverse(record, @value_name)
+      sk = @key_prefix + k + @key_suffix
+      
+      @redis.zincrby sk , @increment_score, v
+      if @key_expire > 0
+        @redis.expire sk , @key_expire
       end
       if @value_length > 0
         script = generate_zremrangebyrank_script(sk, @value_length, @order)
