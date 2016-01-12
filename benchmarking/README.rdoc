@@ -1,0 +1,15 @@
+= Benchmark
+
+== worker
+
+    bundle exec fluentd -c default.conf
+    # or
+    bundle exec fluentd -c hiredis.conf
+
+== dummer
+
+    bundle exec dummer -c dummer.conf
+
+== monitor
+
+    bundle exec ruby monitor.rb
